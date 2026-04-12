@@ -21,8 +21,8 @@ function exitGame() {
 }
 
 function dashboard() {
-  document.getElementById("game").classList.remove("active");
-  document.getElementById("inicio").classList.add("active");
+  document.getElementById("inicio").classList.remove("active");
+  document.getElementById("dashboard").classList.add("active");
 }
 
 function renderHand() {
@@ -69,7 +69,7 @@ function playCard() {
     alert("Sem energia!");
     return;
   }
-
+  // Reduz 1 energia a cada jogada
   energy--;
   document.getElementById("energy").innerText = energy;
 
@@ -89,4 +89,11 @@ function passTurn() {
   energy = 3;
   document.getElementById("energy").innerText = energy;
   alert("Turno passado!");
+}
+
+function jogada(q_gols, posse, disciplina) {
+  disciplina = card_amarelo + card_vermelho
+  forceCard = q_gols + posse - disciplina
+  carta_adversario = 
+  carta_atual = 
 }
