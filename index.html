@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <title>FIFA Card Battle</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tilt+Warp&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    
+<!-- Tela Inicial -->
+<div id="inicio" class="screen active">
+  <img src="imgs/logo-jogo.png" alt="logo-jogo-FIFA">
+  <button onclick="startGame()">JOGAR</button>
+  <button onclick="">DASHBOARD</button>
+</div>
+
+<!-- Tela do Jogo -->
+<div id="game" class="screen">
+  
+  <!-- Topo -->
+  <button onclick="exitGame()">SAIR</button>
+  <div class="top-bar">
+    <div>Jogador 1</div>
+    <div id="turn">Seu turno</div>
+  </div>
+
+  <!-- Oponente -->
+  <div class="opponent-area">
+    <div class="card small back">?</div>
+  </div>
+
+  <!-- Área central -->
+  <div class="arena">
+    <div id="active-card" class="card large">
+      <h2>Selecione uma carta</h2>
+    </div>
+  </div>
+
+  <!-- Ações -->
+  <div class="actions">
+    <button onclick="playCard()">Jogar Carta</button>
+    <button onclick="useSkill()">Usar Habilidade</button>
+    <button onclick="passTurn()">Passar Turno</button>
+  </div>
+
+  <!-- Energia -->
+  <div class="energy">
+    Energia: <span id="energy">3</span>
+  </div>
+
+  <!-- Mão -->
+  <div id="hand" class="hand"></div>
+
+</div>
+<div id="dashboard" class="screen">
+  
+</div>
+<!--link JS-->
+<script src="script.js"></script>
+
+</body>
+</html>

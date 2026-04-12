@@ -1,0 +1,101 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-image:url("imgs/campo-bkground.gif");
+  background-size: cover;
+  color: white;
+  text-align: center;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+}
+
+.screen.active {
+  display: block;
+}
+
+/* Tela inicial */
+
+#inicio img{
+  padding: 0% 30%;
+  max-width: 480px;
+  height: auto;
+}
+
+#inicio button {
+  margin-left: 40%;
+  margin-right: 40%;
+  margin-bottom: 1%;
+  padding: 15px 40px;
+  font-size: 20px;
+  background: gold;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: "Tilt Warp", sans-serif;
+}
+
+/* Topo */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  font-weight: bold;
+}
+
+/* Cartas */
+.card {
+  background: #1c1c1c;
+  border-radius: 12px;
+  padding: 10px;
+  margin: 10px;
+  transition: 0.3s;
+}
+
+.card.small {
+  width: 80px;
+  height: 120px;
+}
+
+.card.large {
+  width: 220px;
+  height: 320px;
+  margin: auto;
+}
+
+.card.selected {
+  border: 3px solid yellow;
+  transform: scale(1.1);
+}
+
+/* Arena */
+.arena {
+  margin: 20px;
+}
+
+/* Ações */
+.actions button {
+  margin: 5px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.actions button:nth-child(1) { background: green; }
+.actions button:nth-child(2) { background: blue; }
+.actions button:nth-child(3) { background: red; }
+
+/* Energia */
+.energy {
+  margin-top: 10px;
+}
+
+/* Mão */
+.hand {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
