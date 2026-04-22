@@ -37,6 +37,10 @@ body {
   font-family: "Tilt Warp", sans-serif;
 }
 
+#inicio button:hover{
+  background-color: goldenrod;
+}
+
 /* Topo */
 .top-bar {
   display: flex;

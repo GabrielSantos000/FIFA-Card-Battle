@@ -32,18 +32,20 @@ times2.columns = ["selecao", "gols_time2", "cards_amarelo2", "cards_vermelho2", 
 
 time = pd.merge(times1, times2, on="selecao")
 
-gols = time["total_golsByselecao"] = time["gols_time1"] + time["gols_time2"]
-cartoes = time["total_cardsByselecao"] = time["cards_vermelho1"] + time["cards_vermelho2"] + time["cards_amarelo1"] + time["cards_amarelo2"]
+for i in time['selecao']:
+    open()
+# gols = time["total_golsByselecao"] = time["gols_time1"] + time["gols_time2"]
+# cartoes = time["total_cardsByselecao"] = time["cards_vermelho1"] + time["cards_vermelho2"] + time["cards_amarelo1"] + time["cards_amarelo2"]
 
-# Gráfico de barras
-sns.barplot(time,x='selecao',y='total_golsByselecao')
-plt.xlabel('Teams')
-plt.ylabel('Total goals scored')
-plt.title('Total goals by each team')
-plt.xticks(rotation=90)
-plt.show()
+# # Gráfico de barras
+# sns.barplot(time,x='selecao',y='total_golsByselecao')
+# plt.xlabel('Teams')
+# plt.ylabel('Total goals scored')
+# plt.title('Total goals by each team')
+# plt.xticks(rotation=90)
+# plt.show()
 
-"""
-Força da Carta = quantidade de gols feitos + posse de bola + defesa de gols - gols contra - quantidade de cartões(vermelho + amarelo) - gols sofridos
-OBJETIVO: Conseguir pegar esses valores no dataframe e fazer o cálculo da força da carta.
-"""
+# """
+# Força da Carta = quantidade de gols feitos + posse de bola + defesa de gols - gols contra - quantidade de cartões(vermelho + amarelo) - gols sofridos
+# OBJETIVO: Conseguir pegar esses valores no dataframe e fazer o cálculo da força da carta.
+# """
