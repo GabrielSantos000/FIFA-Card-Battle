@@ -1,7 +1,121 @@
 let selectedCard = null;
 let energia = 3;
 
-const jogadores = ["Lionel Messi", "Cristiano Ronaldo", "Neymar", "Modric", "Van Dijk"];
+const jogadores = [
+  "Lionel Messi",
+  "Cristiano Ronaldo",
+  "Neymar Jr",
+  "Kylian Mbappé",
+  "Erling Haaland",
+  "Kevin De Bruyne",
+  "Luka Modrić",
+  "Vinícius Jr",
+  "Mohamed Salah",
+  "Harry Kane",
+  "Antoine Griezmann",
+  "Bruno Fernandes",
+  "Rodri",
+  "Pedri",
+  "Jude Bellingham",
+  "Joshua Kimmich",
+  "Virgil van Dijk",
+  "Rúben Dias",
+  "Marquinhos",
+  "Sergio Ramos",
+  "Alisson Becker",
+  "Thibaut Courtois",
+  "Ederson",
+  "Manuel Neuer",
+  "Gianluigi Donnarumma"
+];
+
+let players = []
+const getRandomItem = (min, max) =>
+Math.floor(Math.random() * (max - min + 1)) + min
+
+const getRandomPlayer = () => 
+  jogadores[getRandomItem(0, jogadores.length - 1)]
+
+for (let i = 0; i < 5; i++){
+  let escolhido = getRandomPlayer();
+  players.push(escolhido);
+  index = jogadores.indexOf(escolhido);
+  if(index > -1) {
+    jogadores.splice(index, 1);
+  }
+}
+console.log(players)
+
+async function criarCard(jogadores, amount = 5) {
+
+  jogadores.forEach((jogador, amount) => {
+    // aqui eu extraio dados dos jogadores do arquivo JSON
+      const url = `https://www.thesportsdb.com/api/v1/json/3/searchplayers.php?p=${encodeURIComponent(jogador)}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+    
+      if (!data.player) return "Não encontrado";
+    
+      const card = [{
+      nome_player: data.player[2],
+      time_player: data.player[3],
+      img_player: data.player[6],
+      nacionalidade_player: data.player[7],
+      position_player: data.player[11],
+      // Tentar conseguir esses dados de outra forma:
+      // atk: 90,
+      // def: 40,
+      // meio: 75,
+      // hab: atk*2,
+      }]
+
+      const countryCode = paises[`${card.nacionalidade_player}`];
+    
+      const cardHTML = `
+        <div class="card-container">
+          <div class="card-inner">
+            <div class="card-header">
+              <div class="team-flag">
+                <img src="https://flagsapi.com/${countryCode}/flat/64.png">
+              </div>
+              <div class="player-name">
+                ${card.nome_player}
+              </div>
+            </div>
+            <div class="player-image-container">
+              <img class="player-image" src="${card.img_player}">
+            </div>
+            <div class="team-name">
+              ${card.time_player || "Sem time"}
+            </div>
+            <div class="attributes-section">
+            </div>
+          </div>
+        </div>
+      `;
+    
+      document.getElementById("card").innerHTML = cardHTML; 
+}
+
+            // <div class="attributes-section">
+            //   ${createAttribute("Ataque", atk)}
+            //   ${createAttribute("Defesa", def)}
+            //   ${createAttribute("Meio", meio)}
+            //   ${createAttribute("Skill", 95)}
+            // </div>
+
+function createAttribute(label, value) {
+  return `
+    <div class="attribute">
+      <div class="attribute-label">${label}</div>
+      <div class="attribute-value">${value}</div>
+      <div class="attribute-bar">
+        <div class="attribute-bar-fill" style="width: ${value}%"></div>
+      </div>
+    </div>
+  `;
+}
 
 const paises = {
   "Brazil": "BR",
@@ -74,42 +188,6 @@ async function getPlayerData(nome) {
   };
 }
 
-function criarCard(nome) {
-
-}
-
-const cardsPlayers = [
-  { nome: "Lionel Messi", 
-    atk: 88, 
-    def: 80, 
-    meio: 82, 
-    skill: "Ataque +5" },
-
-  { nome: "França", 
-    atk: 85, 
-    def: 84, 
-    meio: 83, 
-    skill: "Defesa +5" },
-
-  { nome: "Argentina", 
-    atk: 86, 
-    def: 78, 
-    meio: 85, 
-    skill: "Meio +5" },
-
-  { nome: "Espanha", 
-    atk: 80, 
-    def: 82, 
-    meio: 88, 
-    skill: "Controle" },
-
-  { nome: "Alemanha", 
-    atk: 83, 
-    def: 81, 
-    meio: 82, 
-    skill: "Equilíbrio" }
-];
-
 // Troca de telas
 function startGame() {
   document.getElementById("inicio").classList.remove("active");
@@ -147,13 +225,12 @@ function renderHand() {
 }
 
 function selectCard(index, element) {
-  selectedCard = cardsPlayers[index];
 
   document.querySelectorAll(".card.small").forEach(c => c.classList.remove("selected"));
   element.classList.add("selected");
 
   document.getElementById("active-card").innerHTML = `
-  <h2>${selectedCard.nome}</h2>
+  <h2>${nome}</h2>
   <p>Ataque: ${selectedCard.atk}</p>
   <p>Defesa: ${selectedCard.def}</p>
   <p>Meio: ${selectedCard.meio}</p>
@@ -176,7 +253,10 @@ function playCard() {
   energia--;
   document.getElementById("energia").innerText = energia;
 
-  alert(`Você jogou ${selectedCard.nome}!`);
+  alert(`Você jogou ${selectedCard.nome}!`)
+  
+    document.getElementsById("turno ativo").classList.remove("ativo");
+  document.getElementsById("turno").classList.add("ativo");
 }
 
 function useSkill() {
@@ -188,18 +268,11 @@ function useSkill() {
   alert(`Habilidade ativada: ${selectedCard.skill}`);
 }
 
-function passTurn() {
-  energia = 5;
-  document.getElementById("energia").innerText = energia;
-  alert("Turno passado!");
-}
-
-function jogada(gols, posse, disciplina) {
-  disciplina = card_amarelo + card_vermelho
-  forceCard = gols + posse - disciplina
-  carta_adversario = 
-  carta_atual = arguments
-}
+// function passTurn() {
+//   energia = 5;
+//   document.getElementById("energia").innerText = energia;
+//   alert("Turno passado!");
+// }
 
 function resultado() {
   

@@ -23,32 +23,32 @@
   
   <!-- Topo -->
   <button onclick="exitGame()">SAIR</button>
+
   <div class="top-bar">
-    <div>Jogador 1</div>
-    <div id="turn">Seu turno</div>
+    <div class="turno" id="turn">Jogador Adversário</div>
+    <div class="turno ativo" id="turn">Seu turno</div>
   </div>
 
-  <!-- Oponente -->
-  <div class="opponent-area">
-    <div class="card small back">?</div>
+  <!-- Adversário -->
+  <div class="adv-area">
+    <div class="card small adv">?</div>
   </div>
 
   <!-- Área central -->
   <div class="arena">
-    <div id="active-card" class="card large">
-    </div>
+    <div id="active-card" class="card large adv"></div>
+    <div id="active-card" class="card large"></div>
   </div>
 
   <!-- Ações -->
   <div class="actions">
     <button onclick="playCard()">Jogar Carta</button>
     <button onclick="useSkill()">Usar Habilidade</button>
-    <button onclick="passTurn()">Passar Turno</button>
-  </div>
-
-  <!-- Energia -->
-  <div class="energy">
-    Energia: <span id="energy">3</span>
+    <!-- <button onclick="passTurn()">Passar Turno</button> -->
+    <!-- Energia -->
+    <div class="energy">
+      Energia: <span id="energy">3</span>
+    </div>
   </div>
 
   <!-- Mão -->
@@ -62,6 +62,12 @@
   <h1>RESULTADOS</h1>
   <p id=""></p>
 </div>
+
+<!-- CARTA -->
+<div id="card">
+  
+</div>
+
 <!--link JS-->
 <script src="script.js"></script>
 

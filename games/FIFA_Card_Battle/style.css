@@ -41,12 +41,31 @@ body {
   background-color: goldenrod;
 }
 
+/*Tela da partida*/
+
 /* Topo */
 .top-bar {
   display: flex;
   justify-content: space-between;
   padding: 10px;
   font-weight: bold;
+}
+
+.turno {
+  margin: 5px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background-color: transparent;
+}
+
+.turno.ativo {
+  display: block;
+  margin: 5px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background-color: rgb(60, 60, 63);
 }
 
 /* Cartas */
@@ -63,9 +82,20 @@ body {
   height: 120px;
 }
 
+.adv-area {
+  display: flex;
+  justify-content: center;  
+}
+
 .card.large {
-  width: 220px;
-  height: 320px;
+  width: 180px;
+  height: 280px;
+  margin: auto;
+}
+
+.card.large.adv {
+  width: 180px;
+  height: 280px;
   margin: auto;
 }
 
@@ -76,7 +106,9 @@ body {
 
 /* Arena */
 .arena {
+  display: flex;
   margin: 20px;
+
 }
 
 /* Ações */
@@ -94,7 +126,12 @@ body {
 
 /* Energia */
 .energy {
-  margin-top: 10px;
+  display: inline;
+  margin: 5px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background-color: rgb(60, 60, 63);
 }
 
 /* Mão */
