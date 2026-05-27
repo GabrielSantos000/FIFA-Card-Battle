@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score, classification_report
 from xgboost import XGBClassifier
 
 CSV_PATH = "data_raw/fifa-world-cup-2022/international_matches.csv"
-DATABASE_URL = "postgresql+psycopg2://postgres:adm@localhost:5432/copa2026"
+DATABASE_URL = "postgresql+psycopg2://postgres:adm@localhost:5432/copa2026?client_encoding=utf8"
 
 MAPA_TIMES = {
     "Brazil": "Brasil",
@@ -93,7 +93,11 @@ def classificar_tipo_jogo(valor: str) -> int:
         return 0
 
     if "world cup" in txt or "copa do mundo" in txt:
-        if "qualification" not in txt and "qualifier" not in txt and "qualifying" not in txt:
+        if (
+            "qualification" not in txt
+            and "qualifier" not in txt
+            and "qualifying" not in txt
+        ):
             return 3
 
     if (
@@ -124,10 +128,13 @@ def tier_time(rank: float) -> int:
 
 def carregar_ratings_elenco() -> pd.DataFrame:
     engine = create_engine(DATABASE_URL)
-    df_jogadores = pd.read_sql_query("""
+    df_jogadores = pd.read_sql_query(
+        """
         SELECT nome, selecao, rating, titular
         FROM jogadores
-    """, engine)
+    """,
+        engine,
+    )
 
     df_jogadores["selecao"] = df_jogadores["selecao"].apply(normalizar_nome_time)
 
@@ -136,12 +143,20 @@ def carregar_ratings_elenco() -> pd.DataFrame:
         titulares = grupo[grupo["titular"] == 1]
         reservas = grupo[grupo["titular"] == 0]
 
-        rows.append({
-            "team": selecao,
-            "rating_titulares": float(titulares["rating"].mean()) if not titulares.empty else 6.5,
-            "rating_reservas": float(reservas["rating"].mean()) if not reservas.empty else 6.0,
-            "rating_total": float(grupo["rating"].mean()) if not grupo.empty else 6.3,
-        })
+        rows.append(
+            {
+                "team": selecao,
+                "rating_titulares": (
+                    float(titulares["rating"].mean()) if not titulares.empty else 6.5
+                ),
+                "rating_reservas": (
+                    float(reservas["rating"].mean()) if not reservas.empty else 6.0
+                ),
+                "rating_total": (
+                    float(grupo["rating"].mean()) if not grupo.empty else 6.3
+                ),
+            }
+        )
 
     return pd.DataFrame(rows)
 
@@ -298,8 +313,8 @@ def calcular_streaks(df_passado: pd.DataFrame, team: str, limite: int = 10):
 
 def stats_h2h(df_passado: pd.DataFrame, casa: str, fora: str, n: int = 10):
     jogos = df_passado[
-        ((df_passado["home_team"] == casa) & (df_passado["away_team"] == fora)) |
-        ((df_passado["home_team"] == fora) & (df_passado["away_team"] == casa))
+        ((df_passado["home_team"] == casa) & (df_passado["away_team"] == fora))
+        | ((df_passado["home_team"] == fora) & (df_passado["away_team"] == casa))
     ].tail(n)
 
     if jogos.empty:
@@ -350,7 +365,7 @@ def stats_h2h(df_passado: pd.DataFrame, casa: str, fora: str, n: int = 10):
 
 
 def main():
-    df = pd.read_csv(CSV_PATH)
+    df = pd.read_csv(CSV_PATH, encoding="latin-1")
 
     competition_col = detectar_coluna_competicao(df)
     if competition_col:
@@ -407,20 +422,28 @@ def main():
 
     print(f"Dataset carregado: {len(df)} linhas válidas")
 
-    df_hist = df[[
-        "date",
-        "home_team",
-        "away_team",
-        "home_team_score",
-        "away_team_score",
-        "match_type_weight",
-    ]].copy()
+    df_hist = df[
+        [
+            "date",
+            "home_team",
+            "away_team",
+            "home_team_score",
+            "away_team_score",
+            "match_type_weight",
+        ]
+    ].copy()
 
-    df_hist = df_hist.rename(columns={
-        "date": "data_ref",
-        "home_team_score": "home_score",
-        "away_team_score": "away_score",
-    }).sort_values("data_ref").reset_index(drop=True)
+    df_hist = (
+        df_hist.rename(
+            columns={
+                "date": "data_ref",
+                "home_team_score": "home_score",
+                "away_team_score": "away_score",
+            }
+        )
+        .sort_values("data_ref")
+        .reset_index(drop=True)
+    )
 
     df_elenco = carregar_ratings_elenco()
     rating_map = df_elenco.set_index("team").to_dict("index")
@@ -445,8 +468,12 @@ def main():
 
         h2h_stats = stats_h2h(df_passado, casa, fora, n=10)
 
-        rating_casa = rating_map.get(casa, {"rating_titulares": 6.5, "rating_reservas": 6.0, "rating_total": 6.3})
-        rating_fora = rating_map.get(fora, {"rating_titulares": 6.5, "rating_reservas": 6.0, "rating_total": 6.3})
+        rating_casa = rating_map.get(
+            casa, {"rating_titulares": 6.5, "rating_reservas": 6.0, "rating_total": 6.3}
+        )
+        rating_fora = rating_map.get(
+            fora, {"rating_titulares": 6.5, "rating_reservas": 6.0, "rating_total": 6.3}
+        )
 
         if row["home_team_score"] > row["away_team_score"]:
             target = 0
@@ -456,145 +483,152 @@ def main():
             target = 1
 
         forca_relativa = (
-            (row["home_team_total_fifa_points"] + casa_stats["momentum"])
-            - (row["away_team_total_fifa_points"] + fora_stats["momentum"])
-        )
+            row["home_team_total_fifa_points"] + casa_stats["momentum"]
+        ) - (row["away_team_total_fifa_points"] + fora_stats["momentum"])
 
         equilibrio_forcas = abs(forca_relativa)
 
-        rank_diff_abs = abs(float(row["home_team_fifa_rank"]) - float(row["away_team_fifa_rank"]))
-        rank_ratio = (
-            min(float(row["home_team_fifa_rank"]), float(row["away_team_fifa_rank"])) /
-            max(float(row["home_team_fifa_rank"]), float(row["away_team_fifa_rank"]))
+        rank_diff_abs = abs(
+            float(row["home_team_fifa_rank"]) - float(row["away_team_fifa_rank"])
         )
+        rank_ratio = min(
+            float(row["home_team_fifa_rank"]), float(row["away_team_fifa_rank"])
+        ) / max(float(row["home_team_fifa_rank"]), float(row["away_team_fifa_rank"]))
 
         equilibrio_real = (
-            rank_diff_abs +
-            abs(casa_stats["win_rate"] - fora_stats["win_rate"]) * 20 +
-            abs(casa_stats["momentum"] - fora_stats["momentum"]) * 5
+            rank_diff_abs
+            + abs(casa_stats["win_rate"] - fora_stats["win_rate"]) * 20
+            + abs(casa_stats["momentum"] - fora_stats["momentum"]) * 5
         )
 
         chance_empate = (
-            (1 - min(abs(casa_stats["win_rate"] - fora_stats["win_rate"]), 1.0)) *
-            (1 - min(abs(casa_stats["saldo"] - fora_stats["saldo"]), 1.0))
-        )
+            1 - min(abs(casa_stats["win_rate"] - fora_stats["win_rate"]), 1.0)
+        ) * (1 - min(abs(casa_stats["saldo"] - fora_stats["saldo"]), 1.0))
 
         desnivel_extremo = rank_diff_abs
         tier_casa = tier_time(float(row["home_team_fifa_rank"]))
         tier_fora = tier_time(float(row["away_team_fifa_rank"]))
         tier_diff = tier_casa - tier_fora
 
-        features.append({
-            "home_team_fifa_rank": row["home_team_fifa_rank"],
-            "away_team_fifa_rank": row["away_team_fifa_rank"],
-            "home_team_total_fifa_points": row["home_team_total_fifa_points"],
-            "away_team_total_fifa_points": row["away_team_total_fifa_points"],
-
-            "home_team_mean_offense_score": row["home_team_mean_offense_score"],
-            "home_team_mean_defense_score": row["home_team_mean_defense_score"],
-            "home_team_mean_midfield_score": row["home_team_mean_midfield_score"],
-            "away_team_mean_offense_score": row["away_team_mean_offense_score"],
-            "away_team_mean_defense_score": row["away_team_mean_defense_score"],
-            "away_team_mean_midfield_score": row["away_team_mean_midfield_score"],
-
-            "rank_diff": row["home_team_fifa_rank"] - row["away_team_fifa_rank"],
-            "rank_diff_abs": rank_diff_abs,
-            "rank_ratio": rank_ratio,
-            "points_diff": row["home_team_total_fifa_points"] - row["away_team_total_fifa_points"],
-            "attack_diff": row["home_team_mean_offense_score"] - row["away_team_mean_offense_score"],
-            "defense_diff": row["home_team_mean_defense_score"] - row["away_team_mean_defense_score"],
-            "midfield_diff": row["home_team_mean_midfield_score"] - row["away_team_mean_midfield_score"],
-
-            "forca_relativa": forca_relativa,
-            "equilibrio_forcas": equilibrio_forcas,
-            "equilibrio_real": equilibrio_real,
-            "chance_empate": chance_empate,
-            "desnivel_extremo": desnivel_extremo,
-            "tier_casa": tier_casa,
-            "tier_fora": tier_fora,
-            "tier_diff": tier_diff,
-
-            "forma_vitorias_casa": casa_stats["vitorias"],
-            "forma_empates_casa": casa_stats["empates"],
-            "forma_derrotas_casa": casa_stats["derrotas"],
-            "forma_gols_casa": casa_stats["gols_marcados"],
-            "forma_sofridos_casa": casa_stats["gols_sofridos"],
-            "forma_win_rate_casa": casa_stats["win_rate"],
-            "forma_draw_rate_casa": casa_stats["draw_rate"],
-            "forma_loss_rate_casa": casa_stats["loss_rate"],
-            "forma_saldo_casa": casa_stats["saldo"],
-            "forma_pontos_casa": casa_stats["pontos"],
-            "forma_ppg_casa": casa_stats["pontos_por_jogo"],
-            "forma_momentum_casa": casa_stats["momentum"],
-            "forma_jogos_oficiais_casa": casa_stats["jogos_oficiais"],
-            "forma_jogos_amistosos_casa": casa_stats["jogos_amistosos"],
-            "forma_peso_comp_casa": casa_stats["peso_medio_competicao"],
-
-            "forma_vitorias_fora": fora_stats["vitorias"],
-            "forma_empates_fora": fora_stats["empates"],
-            "forma_derrotas_fora": fora_stats["derrotas"],
-            "forma_gols_fora": fora_stats["gols_marcados"],
-            "forma_sofridos_fora": fora_stats["gols_sofridos"],
-            "forma_win_rate_fora": fora_stats["win_rate"],
-            "forma_draw_rate_fora": fora_stats["draw_rate"],
-            "forma_loss_rate_fora": fora_stats["loss_rate"],
-            "forma_saldo_fora": fora_stats["saldo"],
-            "forma_pontos_fora": fora_stats["pontos"],
-            "forma_ppg_fora": fora_stats["pontos_por_jogo"],
-            "forma_momentum_fora": fora_stats["momentum"],
-            "forma_jogos_oficiais_fora": fora_stats["jogos_oficiais"],
-            "forma_jogos_amistosos_fora": fora_stats["jogos_amistosos"],
-            "forma_peso_comp_fora": fora_stats["peso_medio_competicao"],
-
-            "streak_vitorias_casa": casa_streaks["streak_vitorias"],
-            "streak_invicto_casa": casa_streaks["streak_invicto"],
-            "streak_sem_vencer_casa": casa_streaks["streak_sem_vencer"],
-
-            "streak_vitorias_fora": fora_streaks["streak_vitorias"],
-            "streak_invicto_fora": fora_streaks["streak_invicto"],
-            "streak_sem_vencer_fora": fora_streaks["streak_sem_vencer"],
-
-            "forma_diff_vitorias": casa_stats["vitorias"] - fora_stats["vitorias"],
-            "forma_diff_empates": casa_stats["empates"] - fora_stats["empates"],
-            "forma_diff_derrotas": casa_stats["derrotas"] - fora_stats["derrotas"],
-            "forma_diff_gols": casa_stats["gols_marcados"] - fora_stats["gols_marcados"],
-            "forma_diff_sofridos": casa_stats["gols_sofridos"] - fora_stats["gols_sofridos"],
-            "forma_diff_win_rate": casa_stats["win_rate"] - fora_stats["win_rate"],
-            "forma_diff_draw_rate": casa_stats["draw_rate"] - fora_stats["draw_rate"],
-            "forma_diff_loss_rate": casa_stats["loss_rate"] - fora_stats["loss_rate"],
-            "forma_diff_saldo": casa_stats["saldo"] - fora_stats["saldo"],
-            "forma_diff_pontos": casa_stats["pontos"] - fora_stats["pontos"],
-            "forma_diff_ppg": casa_stats["pontos_por_jogo"] - fora_stats["pontos_por_jogo"],
-            "forma_diff_momentum": casa_stats["momentum"] - fora_stats["momentum"],
-            "forma_diff_jogos_oficiais": casa_stats["jogos_oficiais"] - fora_stats["jogos_oficiais"],
-            "forma_diff_jogos_amistosos": casa_stats["jogos_amistosos"] - fora_stats["jogos_amistosos"],
-            "forma_diff_peso_comp": casa_stats["peso_medio_competicao"] - fora_stats["peso_medio_competicao"],
-
-            "streak_diff_vitorias": casa_streaks["streak_vitorias"] - fora_streaks["streak_vitorias"],
-            "streak_diff_invicto": casa_streaks["streak_invicto"] - fora_streaks["streak_invicto"],
-            "streak_diff_sem_vencer": casa_streaks["streak_sem_vencer"] - fora_streaks["streak_sem_vencer"],
-
-            "h2h_vitorias_casa": h2h_stats["h2h_vitorias_casa"],
-            "h2h_empates": h2h_stats["h2h_empates"],
-            "h2h_vitorias_fora": h2h_stats["h2h_vitorias_fora"],
-            "h2h_gols_casa": h2h_stats["h2h_gols_casa"],
-            "h2h_gols_fora": h2h_stats["h2h_gols_fora"],
-            "h2h_peso_comp": h2h_stats["h2h_peso_comp"],
-
-            "rating_titulares_casa": rating_casa["rating_titulares"],
-            "rating_reservas_casa": rating_casa["rating_reservas"],
-            "rating_total_casa": rating_casa["rating_total"],
-            "rating_titulares_fora": rating_fora["rating_titulares"],
-            "rating_reservas_fora": rating_fora["rating_reservas"],
-            "rating_total_fora": rating_fora["rating_total"],
-            "rating_diff_titulares": rating_casa["rating_titulares"] - rating_fora["rating_titulares"],
-            "rating_diff_reservas": rating_casa["rating_reservas"] - rating_fora["rating_reservas"],
-            "rating_diff_total": rating_casa["rating_total"] - rating_fora["rating_total"],
-
-            "match_type_weight_atual": row["match_type_weight"],
-            "mando": 1.0,
-            "target": target,
-        })
+        features.append(
+            {
+                "home_team_fifa_rank": row["home_team_fifa_rank"],
+                "away_team_fifa_rank": row["away_team_fifa_rank"],
+                "home_team_total_fifa_points": row["home_team_total_fifa_points"],
+                "away_team_total_fifa_points": row["away_team_total_fifa_points"],
+                "home_team_mean_offense_score": row["home_team_mean_offense_score"],
+                "home_team_mean_defense_score": row["home_team_mean_defense_score"],
+                "home_team_mean_midfield_score": row["home_team_mean_midfield_score"],
+                "away_team_mean_offense_score": row["away_team_mean_offense_score"],
+                "away_team_mean_defense_score": row["away_team_mean_defense_score"],
+                "away_team_mean_midfield_score": row["away_team_mean_midfield_score"],
+                "rank_diff": row["home_team_fifa_rank"] - row["away_team_fifa_rank"],
+                "rank_diff_abs": rank_diff_abs,
+                "rank_ratio": rank_ratio,
+                "points_diff": row["home_team_total_fifa_points"]
+                - row["away_team_total_fifa_points"],
+                "attack_diff": row["home_team_mean_offense_score"]
+                - row["away_team_mean_offense_score"],
+                "defense_diff": row["home_team_mean_defense_score"]
+                - row["away_team_mean_defense_score"],
+                "midfield_diff": row["home_team_mean_midfield_score"]
+                - row["away_team_mean_midfield_score"],
+                "forca_relativa": forca_relativa,
+                "equilibrio_forcas": equilibrio_forcas,
+                "equilibrio_real": equilibrio_real,
+                "chance_empate": chance_empate,
+                "desnivel_extremo": desnivel_extremo,
+                "tier_casa": tier_casa,
+                "tier_fora": tier_fora,
+                "tier_diff": tier_diff,
+                "forma_vitorias_casa": casa_stats["vitorias"],
+                "forma_empates_casa": casa_stats["empates"],
+                "forma_derrotas_casa": casa_stats["derrotas"],
+                "forma_gols_casa": casa_stats["gols_marcados"],
+                "forma_sofridos_casa": casa_stats["gols_sofridos"],
+                "forma_win_rate_casa": casa_stats["win_rate"],
+                "forma_draw_rate_casa": casa_stats["draw_rate"],
+                "forma_loss_rate_casa": casa_stats["loss_rate"],
+                "forma_saldo_casa": casa_stats["saldo"],
+                "forma_pontos_casa": casa_stats["pontos"],
+                "forma_ppg_casa": casa_stats["pontos_por_jogo"],
+                "forma_momentum_casa": casa_stats["momentum"],
+                "forma_jogos_oficiais_casa": casa_stats["jogos_oficiais"],
+                "forma_jogos_amistosos_casa": casa_stats["jogos_amistosos"],
+                "forma_peso_comp_casa": casa_stats["peso_medio_competicao"],
+                "forma_vitorias_fora": fora_stats["vitorias"],
+                "forma_empates_fora": fora_stats["empates"],
+                "forma_derrotas_fora": fora_stats["derrotas"],
+                "forma_gols_fora": fora_stats["gols_marcados"],
+                "forma_sofridos_fora": fora_stats["gols_sofridos"],
+                "forma_win_rate_fora": fora_stats["win_rate"],
+                "forma_draw_rate_fora": fora_stats["draw_rate"],
+                "forma_loss_rate_fora": fora_stats["loss_rate"],
+                "forma_saldo_fora": fora_stats["saldo"],
+                "forma_pontos_fora": fora_stats["pontos"],
+                "forma_ppg_fora": fora_stats["pontos_por_jogo"],
+                "forma_momentum_fora": fora_stats["momentum"],
+                "forma_jogos_oficiais_fora": fora_stats["jogos_oficiais"],
+                "forma_jogos_amistosos_fora": fora_stats["jogos_amistosos"],
+                "forma_peso_comp_fora": fora_stats["peso_medio_competicao"],
+                "streak_vitorias_casa": casa_streaks["streak_vitorias"],
+                "streak_invicto_casa": casa_streaks["streak_invicto"],
+                "streak_sem_vencer_casa": casa_streaks["streak_sem_vencer"],
+                "streak_vitorias_fora": fora_streaks["streak_vitorias"],
+                "streak_invicto_fora": fora_streaks["streak_invicto"],
+                "streak_sem_vencer_fora": fora_streaks["streak_sem_vencer"],
+                "forma_diff_vitorias": casa_stats["vitorias"] - fora_stats["vitorias"],
+                "forma_diff_empates": casa_stats["empates"] - fora_stats["empates"],
+                "forma_diff_derrotas": casa_stats["derrotas"] - fora_stats["derrotas"],
+                "forma_diff_gols": casa_stats["gols_marcados"]
+                - fora_stats["gols_marcados"],
+                "forma_diff_sofridos": casa_stats["gols_sofridos"]
+                - fora_stats["gols_sofridos"],
+                "forma_diff_win_rate": casa_stats["win_rate"] - fora_stats["win_rate"],
+                "forma_diff_draw_rate": casa_stats["draw_rate"]
+                - fora_stats["draw_rate"],
+                "forma_diff_loss_rate": casa_stats["loss_rate"]
+                - fora_stats["loss_rate"],
+                "forma_diff_saldo": casa_stats["saldo"] - fora_stats["saldo"],
+                "forma_diff_pontos": casa_stats["pontos"] - fora_stats["pontos"],
+                "forma_diff_ppg": casa_stats["pontos_por_jogo"]
+                - fora_stats["pontos_por_jogo"],
+                "forma_diff_momentum": casa_stats["momentum"] - fora_stats["momentum"],
+                "forma_diff_jogos_oficiais": casa_stats["jogos_oficiais"]
+                - fora_stats["jogos_oficiais"],
+                "forma_diff_jogos_amistosos": casa_stats["jogos_amistosos"]
+                - fora_stats["jogos_amistosos"],
+                "forma_diff_peso_comp": casa_stats["peso_medio_competicao"]
+                - fora_stats["peso_medio_competicao"],
+                "streak_diff_vitorias": casa_streaks["streak_vitorias"]
+                - fora_streaks["streak_vitorias"],
+                "streak_diff_invicto": casa_streaks["streak_invicto"]
+                - fora_streaks["streak_invicto"],
+                "streak_diff_sem_vencer": casa_streaks["streak_sem_vencer"]
+                - fora_streaks["streak_sem_vencer"],
+                "h2h_vitorias_casa": h2h_stats["h2h_vitorias_casa"],
+                "h2h_empates": h2h_stats["h2h_empates"],
+                "h2h_vitorias_fora": h2h_stats["h2h_vitorias_fora"],
+                "h2h_gols_casa": h2h_stats["h2h_gols_casa"],
+                "h2h_gols_fora": h2h_stats["h2h_gols_fora"],
+                "h2h_peso_comp": h2h_stats["h2h_peso_comp"],
+                "rating_titulares_casa": rating_casa["rating_titulares"],
+                "rating_reservas_casa": rating_casa["rating_reservas"],
+                "rating_total_casa": rating_casa["rating_total"],
+                "rating_titulares_fora": rating_fora["rating_titulares"],
+                "rating_reservas_fora": rating_fora["rating_reservas"],
+                "rating_total_fora": rating_fora["rating_total"],
+                "rating_diff_titulares": rating_casa["rating_titulares"]
+                - rating_fora["rating_titulares"],
+                "rating_diff_reservas": rating_casa["rating_reservas"]
+                - rating_fora["rating_reservas"],
+                "rating_diff_total": rating_casa["rating_total"]
+                - rating_fora["rating_total"],
+                "match_type_weight_atual": row["match_type_weight"],
+                "mando": 1.0,
+                "target": target,
+            }
+        )
 
     df_modelo = pd.DataFrame(features)
     print(f"Dataset de features criado: {len(df_modelo)} linhas")
@@ -636,7 +670,7 @@ def main():
         objective="multi:softprob",
         num_class=3,
         eval_metric="mlogloss",
-        random_state=42
+        random_state=42,
     )
 
     model.fit(X_train_scaled, y_train, sample_weight=sample_weights)
