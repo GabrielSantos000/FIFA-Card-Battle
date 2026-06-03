@@ -2,7 +2,7 @@
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-DATABASE_URL = "postgresql+psycopg2://postgres:adm@localhost:5432/copa2026?client_encoding=utf8"
+DATABASE_URL = "postgresql+psycopg2://postgres:adm@localhost:5432/copa2026"
 
 _engine = None
 
@@ -13,8 +13,10 @@ def get_engine():
         _engine = create_engine(
             DATABASE_URL,
             connect_args={
-                "options": "-c client_encoding=utf8"
-            }
+                "options": "-c client_encoding=utf8",
+                "client_encoding": "utf8"
+            },
+            isolation_level="AUTOCOMMIT"
         )
     return _engine
 
@@ -44,9 +46,14 @@ def carregar_dados():
 
     # HISTÓRICO (CSV)
     try:
-        df_hist = pd.read_csv(
-            "data_raw/fifa-world-cup-2022/international_matches.csv", encoding="latin-1"
-        )
+        try:
+            df_hist = pd.read_csv(
+                "data_raw/fifa-world-cup-2022/international_matches.csv", encoding="utf-8"
+            )
+        except UnicodeDecodeError:
+            df_hist = pd.read_csv(
+                "data_raw/fifa-world-cup-2022/international_matches.csv", encoding="latin-1"
+            )
 
         # padroniza nomes
         df_hist = df_hist.rename(
