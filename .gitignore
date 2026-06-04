@@ -1,3 +1,11 @@
 arquivos_temp/
 test_imports.py
 requirements.txt
+games\FIFA_Tabuleiro\README_QUIZ_GENERATOR.md
+games\FIFA_Tabuleiro\RELATORIO_FINAL.md
+games\FIFA_Tabuleiro\SUMARIO_EXECUTIVO.md
+games\FIFA_Tabuleiro\00_LEIA_PRIMEIRO.md
+games\FIFA_Tabuleiro\GUIA_USO.md
+games\FIFA_Tabuleiro\INDICE_ARQUIVOS.md
+games\FIFA_Tabuleiro\test_quiz_generator.py
+games\FIFA_Tabuleiro\quiz_integration_example.py

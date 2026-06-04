@@ -1,12 +1,54 @@
+"""
+VERSÃO MODIFICADA DO JOGO STREAMLIT COM QUIZ DINÂMICO
+Copie este arquivo e renomeie para jogo_streamlit_dinamico.py
+ou integre os trechos necessários no seu arquivo original
+"""
+
 import streamlit as st
 import random
 import json
 import time
 import os
 from datetime import datetime
+from quiz_generator import QuizGenerator
 
-# Configuração da página
-st.set_page_config(page_title="Copa do Mundo - Jogo de Tabuleiro", layout="wide", initial_sidebar_state="expanded")
+# ============================================================================
+# CONFIGURAÇÃO INICIAL
+# ============================================================================
+
+st.set_page_config(
+    page_title="Copa do Mundo - Jogo de Tabuleiro",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# ============================================================================
+# CONFIGURAÇÃO DO QUIZ DINÂMICO
+# ============================================================================
+
+# URL DO BANCO DE DADOS - CUSTOMIZE AQUI
+DATABASE_URL = "projeto/data_raw/fifa-world-cup/wcmatches.csv"
+AI_PROVIDER = "mock"  # Mude para "openai" ou "anthropic" se tiver API
+NUM_PERGUNTAS = 10
+
+# Cache do gerador (carrega uma única vez)
+@st.cache_resource
+def load_quiz_generator():
+    """Carrega e cache o gerador de quiz"""
+    try:
+        generator = QuizGenerator(
+            database_url=DATABASE_URL,
+            ai_provider=AI_PROVIDER,
+            database_type="csv"
+        )
+        return generator
+    except Exception as e:
+        st.error(f"Erro ao carregar o gerador: {e}")
+        return None
+
+# ============================================================================
+# DADOS ESTÁTICOS (COMPATIBILIDADE COM JOGO ORIGINAL)
+# ============================================================================
 
 paises = [
     {'id': 'bra', 'nome': 'Brasil', 'code': 'BRA'},
@@ -27,7 +69,8 @@ paises = [
     {'id': 'sen', 'nome': 'Senegal', 'code': 'SEN'},
 ]
 
-quiz = [
+# Quiz padrão (fallback se gerador falhar)
+quiz_padrao = [
     {'q': 'Qual país sediou a Copa do Mundo de 2022?', 'a': 'Qatar', 'opts': ['Russia', 'Qatar', 'Brasil', 'Alemanha']},
     {'q': 'Quem ganhou a Copa do Mundo de 2022?', 'a': 'Argentina', 'opts': ['França', 'Argentina', 'Marrocos', 'Croácia']},
     {'q': 'Quem foi artilheiro da Copa de 2022?', 'a': 'Mbappé', 'opts': ['Messi', 'Neymar', 'Mbappé', 'Lewandowski']},
@@ -92,16 +135,84 @@ def save_ranking(vencedor):
     with open(RANKING_FILE, 'w') as f:
         json.dump(rankings, f)
 
-# Inicializar session state
+# ============================================================================
+# INICIALIZAR SESSION STATE
+# ============================================================================
+
 if 'game_state' not in st.session_state:
-    st.session_state.game_state = 'menu'  # Categorias: menu, config, partida, finished
+    st.session_state.game_state = 'menu'
     st.session_state.players = []
     st.session_state.current_player_idx = 0
     st.session_state.turn = 1
     st.session_state.casa = initialize_board()
     st.session_state.game_messages = []
+    st.session_state.quiz = None  # Quiz dinâmico
 
+# ============================================================================
+# PAINEL DE CONFIGURAÇÃO DO QUIZ (SIDEBAR)
+# ============================================================================
+
+with st.sidebar:
+    st.header("Configuração do Quiz")
+    
+    # Campo para URL do banco de dados
+    custom_db_url = st.text_input(
+        "URL do DB",
+        value=DATABASE_URL,
+        help="Caminho local ou URL HTTP de um CSV ou JSON"
+    )
+    
+    # Seletor de provedor de IA
+    ai_choice = st.selectbox(
+        "Provedor de IA",
+        ["mock", "openai", "anthropic"],
+        index=0,
+        help="mock = simulação (rápida)\nopenai ou anthropic = IA real"
+    )
+    
+    # Número de perguntas
+    num_q = st.slider(
+        "Número de Perguntas",
+        min_value=1,
+        max_value=10,
+        value=NUM_PERGUNTAS
+    )
+    
+    # Contexto (opcional)
+    # quiz_context = st.text_area(
+    #     "Contexto do Quiz (opcional)",
+    #     value="",
+    #     help="Ex: 'sobre Copa 2022' ou 'sobre artilheiros'"
+    # )
+    
+    # Botão para testar/recarregar quiz
+    if st.button("Recarregar Quiz Dinâmico", use_container_width=True):
+        with st.spinner("Gerando perguntas..."):
+            generator = load_quiz_generator()
+            if generator:
+                st.session_state.quiz = generator.generate_questions(
+                    num_questions=num_q
+                    # context=quiz_context if quiz_context else "sobre Copa do Mundo"
+                )
+                st.success(f"{len(st.session_state.quiz)} perguntas geradas!")
+            else:
+                st.warning("Usando quiz padrão como fallback")
+                st.session_state.quiz = quiz_padrao
+    
+    st.markdown("---")
+    
+    # Info do banco de dados
+    if st.button("Ver Info do Banco", use_container_width=True):
+        generator = load_quiz_generator()
+        if generator:
+            info = generator.get_data_summary()
+            with st.expander("Informações"):
+                st.json(info)
+
+# ============================================================================
 # PÁGINA PRINCIPAL
+# ============================================================================
+
 st.title("JOGO DE TABULEIRO FIFA")
 
 if st.session_state.game_state == 'menu':
@@ -109,6 +220,16 @@ if st.session_state.game_state == 'menu':
     
     with col1:
         if st.button("Nova Partida", use_container_width=True, key="btn_nova"):
+            # Carregar quiz dinâmico ao iniciar partida
+            if st.session_state.quiz is None:
+                generator = load_quiz_generator()
+                if generator:
+                    st.session_state.quiz = generator.generate_questions(
+                        num_questions=NUM_PERGUNTAS
+                    )
+                else:
+                    st.session_state.quiz = quiz_padrao
+            
             st.session_state.game_state = 'config'
             st.rerun()
     
@@ -122,7 +243,7 @@ if st.session_state.game_state == 'menu':
             st.write("Obrigado por jogar!")
 
 elif st.session_state.game_state == 'ranking':
-    st.header(" Ranking Global")
+    st.header("Ranking Global")
     rankings = load_rankings()
     
     if not rankings:
@@ -131,7 +252,7 @@ elif st.session_state.game_state == 'ranking':
         for i, r in enumerate(rankings):
             st.write(f"**{i+1}º lugar** | {r['code']} - {r['vencedor']} | {r['score']} pts | {r['data']}")
     
-    if st.button("Voltar ao Menu", key="btn_back_ranking"):
+    if st.button("← Voltar ao Menu", key="btn_back_ranking"):
         st.session_state.game_state = 'menu'
         st.rerun()
 
@@ -179,11 +300,19 @@ elif st.session_state.game_state == 'config':
             st.rerun()
     
     with col2:
-        if st.button("← Voltar", use_container_width=True):
+        if st.button("Voltar", use_container_width=True):
             st.session_state.game_state = 'menu'
             st.rerun()
 
 elif st.session_state.game_state == 'playing':
+    # Carregar quiz se não estiver carregado
+    if st.session_state.quiz is None:
+        generator = load_quiz_generator()
+        if generator:
+            st.session_state.quiz = generator.generate_questions(NUM_PERGUNTAS)
+        else:
+            st.session_state.quiz = quiz_padrao
+    
     # Status do jogo
     st.header(f"TURNO {st.session_state.turn}")
     
@@ -207,10 +336,10 @@ elif st.session_state.game_state == 'playing':
     
     # Turno do jogador atual
     cp = st.session_state.players[st.session_state.current_player_idx]
-    st.info(f"🎮 Vez de: **{cp['nome']} ({cp['pais']['code']})**")
+    st.info(f"Vez de: **{cp['nome']} ({cp['pais']['code']})**")
     
     # Botão para rolar o dado
-    if st.button("🎲 Rolar o Dado", use_container_width=True, key="btn_dado"):
+    if st.button("Rolar o Dado", use_container_width=True, key="btn_dado"):
         dado = random.randint(1, 6)
         st.session_state.dado_resultado = dado
     
@@ -244,8 +373,11 @@ elif st.session_state.game_state == 'playing':
         else:
             # Aplicar efeito da casa
             if tipo_casa == 'quiz':
-                st.subheader("QUIZ DA COPA DO MUNDO")
-                pergunta = random.choice(quiz)
+                st.subheader("❓ QUIZ DA COPA DO MUNDO")
+                
+                # Escolher pergunta aleatória do quiz dinâmico
+                pergunta = random.choice(st.session_state.quiz)
+                
                 st.write(f"**Pergunta:** {pergunta['q']}")
                 
                 opts = pergunta['opts'].copy()
@@ -255,11 +387,11 @@ elif st.session_state.game_state == 'playing':
                 
                 if st.button("Confirmar Resposta", key="btn_resposta"):
                     if resposta == pergunta['a']:
-                        st.success("Correto! +20 pontos e avança 2 casas.")
+                        st.success("✅ Correto! +20 pontos e avança 2 casas.")
                         cp['score'] += 20
                         cp['position'] = min(cp['position'] + 2, BOARD_SIZE - 1)
                     else:
-                        st.error(f"Errado! A resposta certa era: **{pergunta['a']}**. Volta 1 casa.")
+                        st.error(f"❌ Errado! A resposta certa era: **{pergunta['a']}**. Volta 1 casa.")
                         cp['position'] = max(0, cp['position'] - 1)
                     
                     st.session_state.current_player_idx = (st.session_state.current_player_idx + 1) % len(st.session_state.players)
@@ -270,7 +402,7 @@ elif st.session_state.game_state == 'playing':
                     st.rerun()
             
             elif tipo_casa == 'bonus':
-                st.success("GOL! Avança 2 casas e ganha 10 pontos!")
+                st.success("⚽ GOL! Avança 2 casas e ganha 10 pontos!")
                 cp['position'] = min(cp['position'] + 2, BOARD_SIZE - 1)
                 cp['score'] += 10
                 
@@ -282,7 +414,7 @@ elif st.session_state.game_state == 'playing':
                     st.rerun()
             
             elif tipo_casa == 'penalty':
-                st.warning("FALTA! Cartão vermelho, volte 2 casas!")
+                st.warning("🔴 FALTA! Cartão vermelho, volte 2 casas!")
                 cp['position'] = max(0, cp['position'] - 2)
                 
                 if st.button("Próximo Turno", key="btn_proximo_penalty"):
@@ -293,7 +425,7 @@ elif st.session_state.game_state == 'playing':
                     st.rerun()
             
             elif tipo_casa == 'perigo':
-                st.info("VAR EM AÇÃO! Escolha quantas casas quer avançar (1 a 6)")
+                st.info("📹 VAR EM AÇÃO! Escolha quantas casas quer avançar (1 a 6)")
                 extra = st.slider("Casas:", min_value=1, max_value=6, value=3, key="slider_var")
                 
                 if st.button("Avançar", key="btn_avancar"):

@@ -20,7 +20,6 @@ from services.estatisticas import (
 
 st.set_page_config(layout="wide", page_title="Copa do Mundo 2026")
 
-
 components.html(
     """
 <script>
