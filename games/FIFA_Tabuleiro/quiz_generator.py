@@ -78,7 +78,7 @@ class QuizGenerator:
             print(f"Erro ao carregar banco de dados: {e}")
             self.data = None
     
-    def _generate_with_openai(self, prompt: str, num_questions: int = 10) -> List[Dict]:
+    def _generate_with_openai(self, prompt: str, num_questions: int = 5) -> List[Dict]:
         try:
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -104,7 +104,6 @@ class QuizGenerator:
             return []
     
     def _generate_with_anthropic(self, prompt: str, num_questions: int = 5) -> List[Dict]:
-        """Gera perguntas usando Anthropic Claude"""
         try:
             response = self.client.messages.create(
                 model="claude-3-sonnet-20240229",
