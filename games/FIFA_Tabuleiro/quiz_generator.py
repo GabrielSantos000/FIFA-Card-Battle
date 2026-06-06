@@ -124,31 +124,31 @@ class QuizGenerator:
             print(f"Erro ao usar Anthropic: {e}")
             return []
     
-    def _generate_mock_questions(self, num_questions: int = 5) -> List[Dict]:
-        if self.data is None or self.data.empty:
-            return self._get_default_questions()
+    # def _generate_mock_questions(self, num_questions: int = 5) -> List[Dict]:
+    #     if self.data is None or self.data.empty:
+    #         return self._get_padrao_quiz()
         
-        questions = []
-        sample_data = self.data.sample(min(num_questions, len(self.data)))
+    #     questions = []
+    #     sample_data = self.data.sample(min(num_questions, len(self.data)))
         
-        for idx, row in sample_data.iterrows():
-            col_names = list(self.data.columns)
-            if len(col_names) >= 2:
-                col1, col2 = col_names[0], col_names[1]
+    #     for idx, row in sample_data.iterrows():
+    #         col_names = list(self.data.columns)
+    #         if len(col_names) >= 2:
+    #             col1, col2 = col_names[0], col_names[1]
                 
-                questions.append({
-                    'q': f'Qual é o valor de "{col1}" para "{row[col1]}"?',
-                    'a': str(row[col2]),
-                    'opts': [
-                        str(row[col2]),
-                        str(self.data[col2].sample(1).values[0]),
-                        str(self.data[col2].sample(1).values[0]),
-                        str(self.data[col2].sample(1).values[0])
-                    ]
-                })
-                questions[-1]['opts'] = list(set(questions[-1]['opts']))[:4]
+    #             questions.append({
+    #                 'q': f'Qual é o valor de "{col1}" para "{row[col1]}"?',
+    #                 'a': str(row[col2]),
+    #                 'opts': [
+    #                     str(row[col2]),
+    #                     str(self.data[col2].sample(1).values[0]),
+    #                     str(self.data[col2].sample(1).values[0]),
+    #                     str(self.data[col2].sample(1).values[0])
+    #                 ]
+    #             })
+    #             questions[-1]['opts'] = list(set(questions[-1]['opts']))[:4]
         
-        return questions
+    #     return self._get_padrao_quiz() # Aqui é pra retornar 'questions', mas vou manter as perguntas padrão
     
     def _parse_ai_response(self, content: str) -> List[Dict]:
         try:
@@ -164,14 +164,14 @@ class QuizGenerator:
                 if isinstance(item, dict) and all(k in item for k in ['q', 'a', 'opts']):
                     questions.append(item)
             
-            return questions if questions else self._get_default_questions()
+            return questions if questions else self._get_padrao_quiz()
         
         except (json.JSONDecodeError, KeyError, ValueError):
-            return self._get_default_questions()
+            return self._get_padrao_quiz()
     
     
     # Retorna perguntas padrão se houver falha na geração
-    def _get_default_questions(self) -> List[Dict]:
+    def _get_padrao_quiz(self) -> List[Dict]:
         return [
         {'q': 'Qual país sediou a Copa do Mundo de 2022?', 'a': 'Qatar', 'opts': ['Russia', 'Qatar', 'Brasil', 'Alemanha']},
         {'q': 'Quem ganhou a Copa do Mundo de 2022?', 'a': 'Argentina', 'opts': ['França', 'Argentina', 'Marrocos', 'Croácia']},
@@ -188,9 +188,8 @@ class QuizGenerator:
     def generate_questions(self, num_questions: int = 5, context: str = "") -> List[Dict]:
         if self.data is None or self.data.empty:
             print("Banco de dados vazio, retornando perguntas padrão")
-            return self._get_default_questions()
+            return self._get_padrao_quiz()
         
-        # Prepare dados para contexto
         data_sample = self.data.head(10).to_string()
         
         prompt = f"""
@@ -228,8 +227,10 @@ class QuizGenerator:
             return self._generate_with_anthropic(prompt, num_questions)
                 
         else:
-            print(f"Provedor '{self.ai_provider}' não disponível ou sem chave API")
-            return self._generate_mock_questions(num_questions)
+            # print(f"Provedor '{self.ai_provider}' não disponível ou sem chave API")
+            # return self._generate_mock_questions(num_questions)
+            print("Usando perguntas padrão")
+            return self._get_padrao_quiz()
     
     # Resumo dos dados
     def get_data_summary(self) -> Dict:
@@ -255,7 +256,6 @@ def create_quiz_from_csv(csv_path: str, num_questions: int = 5) -> List[Dict]:
     
     return generator.generate_questions(num_questions)
 
-
 def create_quiz_from_json(json_path: str, num_questions: int = 5) -> List[Dict]:
     generator = QuizGenerator(
         database_url=json_path,
@@ -264,80 +264,3 @@ def create_quiz_from_json(json_path: str, num_questions: int = 5) -> List[Dict]:
     )
     
     return generator.generate_questions(num_questions)
-
-
-# # EXEMPLO
-# if __name__ == "__main__":
-#     print("=" * 70)
-#     print("GERADOR DE QUIZ COM IA - EXEMPLOS")
-#     print("=" * 70)
-    
-#     # Exemplo 1: Usando arquivo CSV local
-#     print("\n[EXEMPLO 1] Quiz a partir de CSV local")
-#     print("-" * 70)
-    
-#     csv_local = r"projeto/data_raw/fifa-world-cup/wcmatches.csv"
-    
-#     if os.path.exists(csv_local):
-#         generator1 = QuizGenerator(
-#             database_url=csv_local,
-#             ai_provider="mock",
-#             database_type="csv"
-#         )
-        
-#         print(generator1.get_data_summary())
-#         questions = generator1.generate_questions(num_questions=3, context="sobre partidas de Copa")
-        
-#         for i, q in enumerate(questions, 1):
-#             print(f"\nPergunta {i}: {q['q']}")
-#             print(f"Resposta correta: {q['a']}")
-#             print(f"Opções: {q['opts']}")
-    
-#     # Exemplo 2: Usando URL remota (CSV)
-#     print("\n\n[EXEMPLO 2] Quiz a partir de CSV remota")
-#     print("-" * 70)
-#     print("Configuração para usar URL remota:")
-#     print("""
-# generator = QuizGenerator(
-#     database_url="https://exemplo.com/dados.csv",
-#     ai_provider="openai",  # Requer OPENAI_API_KEY
-#     api_key="sua-chave-aqui",  # Ou use variável de ambiente
-#     database_type="csv"
-# )
-# questions = generator.generate_questions(num_questions=5)
-#     """)
-    
-#     # Exemplo 3: Usando IA real (OpenAI)
-#     print("\n[EXEMPLO 3] Com IA real (OpenAI)")
-#     print("-" * 70)
-#     print("""
-# import os
-# os.environ['OPENAI_API_KEY'] = 'sua-chave-openai'
-
-# generator = QuizGenerator(
-#     database_url="dados.csv",
-#     ai_provider="openai",
-#     database_type="csv"
-# )
-
-# questions = generator.generate_questions(
-#     num_questions=5,
-#     context="perguntas sobre artilheiros da Copa 2022"
-# )
-#     """)
-    
-#     # Exemplo 4: Usando IA real (Anthropic)
-#     print("\n[EXEMPLO 4] Com IA real (Anthropic)")
-#     print("-" * 70)
-#     print("""
-# import os
-# os.environ['ANTHROPIC_API_KEY'] = 'sua-chave-anthropic'
-
-# generator = QuizGenerator(
-#     database_url="https://exemplo.com/dados.json",
-#     ai_provider="anthropic",
-#     database_type="json"
-# )
-
-# questions = generator.generate_questions(num_questions=5)
-#     """)
